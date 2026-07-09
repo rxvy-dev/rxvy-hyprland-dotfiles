@@ -1,0 +1,143 @@
+/* Colors are generated from ~/.config/hypr/colors.conf
+   by scripts/reload-theme.sh -> waybar/colors.css
+   Do not hardcode colors below; edit colors.conf instead. */
+@import "colors.css";
+
+* {
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: @surface;
+    border: 1px solid @border_inactive;
+    border-radius: 3px;
+    box-shadow: 0 3px 24px alpha(@accent, 0.28);
+}
+
+#custom-launcher,
+#custom-exec,
+#workspaces,
+#window,
+#custom-wallpaper,
+#custom-theme,
+#custom-monitors,
+#custom-controlcenter,
+#idle_inhibitor,
+#clock,
+#cpu,
+#memory,
+#temperature,
+#battery,
+#network,
+#pulseaudio,
+#tray,
+#custom-power {
+    color: @foreground;
+    padding: 0 14px;
+    border-left: 1px solid alpha(@accent, 0.22);
+    transition: background-color 150ms ease-in-out, color 150ms ease-in-out, box-shadow 150ms ease-in-out;
+}
+
+/* First module on each side shouldn't double up the outer border */
+#custom-launcher {
+    border-left: none;
+    background-color: @foreground;
+    color: @background;
+    font-weight: 800;
+    box-shadow: 3px 0 14px -4px alpha(@accent, 0.5);
+}
+
+#custom-launcher:hover {
+    background-color: @accent;
+}
+
+#workspaces {
+    padding: 0 4px;
+}
+
+#workspaces button {
+    color: @muted;
+    padding: 0 8px;
+    background: transparent;
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
+}
+
+#workspaces button.active {
+    color: @foreground;
+    border-bottom: 2px solid @accent;
+    box-shadow: 0 4px 10px -4px alpha(@accent, 0.9);
+}
+
+#workspaces button:hover {
+    color: @accent;
+}
+
+#window {
+    color: @muted;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+}
+
+#clock {
+    font-weight: 800;
+    color: @foreground;
+    letter-spacing: 2px;
+    text-shadow: 0 0 14px alpha(@accent, 0.55);
+}
+
+#custom-exec:hover,
+#custom-wallpaper:hover,
+#custom-theme:hover,
+#custom-monitors:hover,
+#custom-controlcenter:hover,
+#idle_inhibitor:hover,
+#cpu:hover,
+#memory:hover,
+#temperature:hover,
+#battery:hover,
+#network:hover,
+#pulseaudio:hover {
+    background-color: @foreground;
+    color: @background;
+    box-shadow: 0 0 12px -2px alpha(@accent, 0.6);
+}
+
+#battery.warning {
+    color: @background;
+    background-color: @accent;
+}
+
+#battery.critical {
+    color: @background;
+    background-color: @foreground;
+}
+
+#tray {
+    padding: 0 10px;
+}
+
+#custom-power {
+    background-color: @foreground;
+    color: @background;
+    font-weight: 800;
+    border-radius: 0 3px 3px 0;
+    box-shadow: -3px 0 14px -4px alpha(@accent, 0.5);
+}
+
+#custom-power:hover {
+    background-color: @accent;
+}
+
+tooltip {
+    background: @surface;
+    border: 1px solid @accent;
+    border-radius: 3px;
+    color: @foreground;
+    box-shadow: 0 4px 20px alpha(@accent, 0.3);
+}

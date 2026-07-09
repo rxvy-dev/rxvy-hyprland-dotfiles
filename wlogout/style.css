@@ -1,0 +1,50 @@
+* {
+    background-image: none;
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 13px;
+}
+
+window {
+    background-color: rgba(0, 0, 0, 0.88);
+}
+
+button {
+    color: #FFFFFF;
+    background-color: #0D0D0D;
+    border: 2px solid #2B2B2B;
+    border-radius: 16px;
+    margin: 16px;
+    min-width: 160px;
+    min-height: 160px;
+    background-repeat: no-repeat;
+    background-position: center 34%;
+    background-size: 30%;
+    transition: all 150ms ease-in-out;
+}
+
+button:focus,
+button:active,
+button:hover {
+    background-color: #1a1a1a;
+    border-color: #FFFFFF;
+}
+
+#lock {
+    background-image: image(url("icons/lock.png"));
+}
+
+#logout {
+    background-image: image(url("icons/logout.png"));
+}
+
+#suspend {
+    background-image: image(url("icons/suspend.png"));
+}
+
+#reboot {
+    background-image: image(url("icons/reboot.png"));
+}
+
+#shutdown {
+    background-image: image(url("icons/shutdown.png"));
+}

@@ -1,0 +1,6 @@
+@define-color background #000000;
+@define-color foreground #ffffff;
+@define-color accent #ffffff;
+@define-color muted #808080;
+@define-color surface rgba(13, 13, 13, 0.85);
+@define-color border_inactive #2b2b2b;

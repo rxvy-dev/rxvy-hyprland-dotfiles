@@ -1,0 +1,148 @@
+{
+    // Bar geometry - tweak these to customize the bar itself
+    "layer": "top",
+    "position": "top",
+    "height": 32,
+    "spacing": 0,
+    "margin-top": 8,
+    "margin-left": 16,
+    "margin-right": 16,
+
+    // Add/remove/reorder module names in the three arrays below to
+    // customize the bar layout — every module is defined further down
+    // and any of them can be moved between left/center/right freely.
+    "modules-left": ["custom/launcher", "custom/exec", "hyprland/workspaces", "hyprland/window"],
+    "modules-center": ["clock"],
+    // NOTE: "temperature" is left out by default. On a lot of systems
+    // waybar can't auto-detect a hwmon sensor and that module throws on
+    // startup, which kills the *entire* bar, not just that module —
+    // one of the most common reasons a Waybar top bar silently never
+    // appears. To enable it, add "temperature" back to the array below
+    // and set an explicit "hwmon-path" in the "temperature" block
+    // further down (find yours with: ls /sys/class/hwmon/*/name).
+    "modules-right": ["custom/wallpaper", "custom/theme", "custom/monitors", "custom/controlcenter", "idle_inhibitor", "pulseaudio", "network", "cpu", "memory", "battery", "tray", "custom/power"],
+
+    "custom/launcher": {
+        "format": "MENU",
+        "tooltip": false,
+        "on-click": "rofi -show drun",
+        "on-click-right": "rofi -show run"
+    },
+
+    // Prompts for a shell command (rofi) and runs it. TUI/CLI programs
+    // (see TUI_APPS in the script) open inside kitty so their interface
+    // is visible instead of running invisibly in the background.
+    "custom/exec": {
+        "format": "RUN",
+        "tooltip-format": "Click to run a command — TUI programs open in kitty",
+        "on-click": "~/.config/hypr-scripts/run-command.sh"
+    },
+
+    "hyprland/workspaces": {
+        "format": "[{name}]",
+        "on-click": "activate",
+        "persistent-workspaces": {
+            "*": 5
+        }
+    },
+
+    "hyprland/window": {
+        "format": "{title}",
+        "max-length": 42,
+        "separate-outputs": true,
+        "rewrite": {
+            "": "DESKTOP"
+        }
+    },
+
+    "custom/wallpaper": {
+        "format": "WALL",
+        "tooltip-format": "Click to cycle · Right-click to pick visually",
+        "on-click": "~/.config/hypr-scripts/cycle-wallpaper.sh",
+        "on-click-right": "~/.config/hypr-scripts/pick-wallpaper.sh"
+    },
+
+    "custom/theme": {
+        "format": "THEME",
+        "tooltip-format": "Pick a color theme (also switches the wallpaper)",
+        "on-click": "~/.config/hypr-scripts/theme-picker.sh"
+    },
+
+    "custom/monitors": {
+        "format": "MONITORS",
+        "tooltip-format": "Arrange displays, Hz, rotation",
+        "on-click": "qs ipc call monitors toggle"
+    },
+
+    "custom/controlcenter": {
+        "format": "MORE",
+        "tooltip-format": "Lock / DND / mute / theme / wallpaper, in one panel",
+        "on-click": "qs ipc call controlcenter toggle"
+    },
+
+    "idle_inhibitor": {
+        "format": "{icon}",
+        "format-icons": {
+            "activated": "AWAKE",
+            "deactivated": "IDLE-OK"
+        }
+    },
+
+    "clock": {
+        "format": "{:%H:%M:%S}  //  {:%a %d %b}",
+        "format-alt": "{:%Y-%m-%d}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+        "interval": 1
+    },
+
+    // Disabled by default — see the NOTE above "modules-right". Add
+    // "hwmon-path": "/sys/class/hwmon/hwmonX/temp1_input" (your real
+    // path) before re-adding "temperature" to modules-right, or it can
+    // crash the bar again on boot.
+    "temperature": {
+        "critical-threshold": 80,
+        "format": "TEMP {temperatureC}C"
+    },
+
+    "cpu": {
+        "format": "CPU {usage}%",
+        "tooltip": false
+    },
+
+    "memory": {
+        "format": "MEM {}%"
+    },
+
+    "battery": {
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "BAT {capacity}%",
+        "format-charging": "BAT {capacity}% CHG"
+    },
+
+    "network": {
+        "format-wifi": "NET {signalStrength}%",
+        "format-ethernet": "NET WIRED",
+        "format-disconnected": "NET OFFLINE",
+        "tooltip-format": "{ifname} via {gwaddr}"
+    },
+
+    "pulseaudio": {
+        "format": "VOL {volume}%",
+        "format-muted": "VOL MUTE",
+        "on-click": "pavucontrol"
+    },
+
+    "tray": {
+        "icon-size": 15,
+        "spacing": 10
+    },
+
+    "custom/power": {
+        "format": "PWR",
+        "tooltip": false,
+        "on-click": "wlogout -b 5 --layout ~/.config/wlogout/layout --css ~/.config/wlogout/style.css"
+    }
+}

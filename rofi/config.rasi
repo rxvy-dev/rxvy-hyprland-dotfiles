@@ -1,0 +1,113 @@
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    icon-theme: "Papirus";
+    display-drun: "APPS";
+    display-run: "RUN";
+    display-window: "WINDOWS";
+    drun-display-format: "{icon} {name}";
+    font: "JetBrainsMono Nerd Font 11";
+}
+
+/* BEGIN-GENERATED-COLORS (managed by scripts/reload-theme.sh) */
+* {
+    background: #000000;
+    foreground: #ffffff;
+    accent: #ffffff;
+    muted: #808080;
+    surface: #0d0d0d;
+    border-col: #2b2b2b;
+}
+/* END-GENERATED-COLORS */
+
+window {
+    background-color: @background;
+    border: 2px;
+    border-color: @foreground;
+    border-radius: 0px;
+    width: 34%;
+    padding: 0;
+}
+
+mainbox {
+    background-color: transparent;
+    children: [ "inputbar", "message", "listview" ];
+    spacing: 0px;
+    padding: 0px;
+}
+
+/* Bracketed HUD-style prompt bar, matching the waybar aesthetic */
+inputbar {
+    background-color: @foreground;
+    text-color: @background;
+    padding: 12px 16px;
+    children: [ "prompt", "entry" ];
+    border: 0px 0px 2px 0px;
+    border-color: @foreground;
+}
+
+prompt {
+    text-color: @background;
+    font: "JetBrainsMono Nerd Font Bold 11";
+}
+
+entry {
+    text-color: @background;
+    placeholder: "type to search...";
+    placeholder-color: rgba(0, 0, 0, 60%);
+    padding: 0px 0px 0px 10px;
+}
+
+message {
+    background-color: @surface;
+    text-color: @muted;
+    border: 0px 0px 1px 0px;
+    border-color: @border-col;
+    padding: 6px 16px;
+}
+
+textbox {
+    text-color: @muted;
+}
+
+listview {
+    lines: 8;
+    background-color: transparent;
+    columns: 1;
+    spacing: 0px;
+    scrollbar: false;
+    padding: 6px 0px;
+}
+
+element {
+    background-color: transparent;
+    text-color: @foreground;
+    padding: 8px 16px;
+    border-radius: 0px;
+}
+
+element-icon {
+    size: 18px;
+    vertical-align: 0.5;
+    margin: 0px 10px 0px 0px;
+}
+
+element-text {
+    vertical-align: 0.5;
+}
+
+element normal.normal {
+    text-color: @foreground;
+}
+
+element alternate.normal {
+    background-color: @surface;
+    text-color: @foreground;
+}
+
+element selected {
+    background-color: @foreground;
+    text-color: @background;
+    border: 0px 0px 0px 3px;
+    border-color: @accent;
+}
