@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Keybind cheat sheet
+pkill -x rofi && exit 0
+cat <<'KB' | rofi -dmenu -i -p "Keybinds" -theme-str 'window { width: 760px; } listview { lines: 16; }' >/dev/null
+SUPER + Return            Terminal (kitty)
+SUPER + Space / D         App launcher
+SUPER + Q                 Close window
+SUPER + E                 Files
+SUPER + B                 Browser
+SUPER + I                 Prism Settings
+SUPER + T                 Theme picker
+SUPER + SHIFT + T         Next theme
+SUPER + W                 Wallpaper picker
+SUPER + SHIFT + W         Random wallpaper
+SUPER + V                 Clipboard history
+SUPER + N                 Night light on/off
+SUPER + L                 Lock screen
+SUPER + Escape            Power menu
+SUPER + F / M             Fullscreen / maximize
+SUPER + G                 Float / tile window
+SUPER + C                 Center floating window
+SUPER + O                 Pin window (all workspaces)
+SUPER + J                 Toggle split direction
+SUPER + Tab               Window switcher
+SUPER + Arrows            Move focus
+SUPER + SHIFT + Arrows    Move window
+SUPER + CTRL + Arrows     Resize window
+SUPER + ALT + ←/→         Previous / next workspace
+SUPER + 1..0              Go to workspace
+SUPER + SHIFT + 1..0      Send window to workspace
+SUPER + S                 Scratchpad
+SUPER + ALT + S           Send window to scratchpad
+SUPER + drag (L / R)      Move / resize with mouse
+Print / SUPER + SHIFT + S Screenshot region
+SHIFT + Print             Screenshot whole screen
+SUPER + Print             Screenshot active window
+SUPER + SHIFT + C         Color picker
+SUPER + SHIFT + F         fastfetch
+SUPER + SHIFT + B         Restart bar
+CTRL + SHIFT + Escape     System monitor (btop)
+SUPER + F1                This cheat sheet
+KB

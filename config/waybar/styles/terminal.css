@@ -1,0 +1,35 @@
+/* Prism — terminal status line (Phosphor / Amber) */
+window#waybar {
+    background: @bar_bg;
+    color: @bar_fg;
+    border-bottom: 1px solid @fg_dim;
+}
+tooltip { background: @bg; border: 1px solid @accent; border-radius: 0; }
+tooltip label { color: @fg; }
+
+* { text-shadow: 0 0 6px alpha(@accent, 0.55); }
+
+#custom-prompt { color: @accent; padding: 0 12px; font-weight: bold; }
+#custom-prompt:hover { background: @accent; color: @bg; text-shadow: none; }
+
+#workspaces button {
+    color: @fg_dim;
+    padding: 0 5px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+#workspaces button.active { color: @bg; background: @accent; text-shadow: none; }
+#workspaces button:hover { color: @accent; background: transparent; }
+#window { color: @fg_dim; padding-left: 12px; }
+
+#cpu, #memory, #pulseaudio, #network, #battery, #custom-nightlight, #clock, #tray, #custom-power {
+    padding: 0 10px;
+    color: @fg;
+    border-left: 1px solid @fg_dim;
+}
+#custom-nightlight.on { color: @accent2; }
+#custom-power { color: @urgent; }
+#custom-power:hover { background: @urgent; color: @bg; }
+#battery.critical, #pulseaudio.muted { color: @urgent; }

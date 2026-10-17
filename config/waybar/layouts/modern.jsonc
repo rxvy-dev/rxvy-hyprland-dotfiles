@@ -1,0 +1,109 @@
+// Prism — modern layout (islands / flat bar styles)
+{
+  "layer": "top",
+  "position": "__POSITION__",
+  "height": __HEIGHT__,
+  "spacing": 6,
+  "margin-top": 0,
+  "modules-left": ["custom/launcher", "hyprland/workspaces", "hyprland/window"],
+  "modules-center": ["clock", "mpris"],
+  "modules-right": ["group/hw", "group/sys", "tray", "custom/power"],
+
+  "custom/launcher": {
+    "format": "",
+    "tooltip-format": "Apps (Super+Space)",
+    "on-click": "prism-launcher apps",
+    "on-click-right": "prism-theme-menu"
+  },
+
+  "hyprland/workspaces": {
+    "format": "{icon}",
+    "format-icons": { "active": "", "default": "", "empty": "" },
+    "persistent-workspaces": { "*": 5 },
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+
+  "hyprland/window": {
+    "format": "{title}",
+    "max-length": 48,
+    "separate-outputs": true,
+    "rewrite": { "": "Desktop" }
+  },
+
+  "clock": {
+    "format": "{:__CLOCK__}",
+    "format-alt": "{:%a %d %b  __CLOCK__}",
+    "tooltip-format": "<big>{:%A, %d %B %Y}</big>\n<tt><small>{calendar}</small></tt>",
+    "calendar": { "mode": "month", "weeks-pos": "left" }
+  },
+
+  "mpris": {
+    "format": "{status_icon} {dynamic}",
+    "dynamic-len": 34,
+    "dynamic-order": ["title", "artist"],
+    "status-icons": { "playing": "", "paused": "", "stopped": "" },
+    "on-click": "playerctl play-pause"
+  },
+
+  "group/hw": {
+    "orientation": "horizontal",
+    "modules": ["cpu", "memory", "temperature"]
+  },
+  "cpu": { "format": " {usage}%", "interval": 3, "on-click": "kitty --class kitty-float -e btop" },
+  "memory": { "format": " {percentage}%", "interval": 5, "tooltip-format": "{used:0.1f} / {total:0.1f} GiB" },
+  "temperature": { "format": " {temperatureC}°", "critical-threshold": 85 },
+
+  "group/sys": {
+    "orientation": "horizontal",
+    "modules": ["custom/nightlight", "pulseaudio", "network", "bluetooth", "battery", "custom/settings"]
+  },
+  "custom/nightlight": {
+    "exec": "prism nightlight status",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "prism nightlight toggle"
+  },
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-muted": " mute",
+    "format-icons": { "headphone": "", "default": ["", "", ""] },
+    "on-click": "prism-osd volume mute",
+    "on-click-right": "pavucontrol",
+    "on-scroll-up": "prism-osd volume up",
+    "on-scroll-down": "prism-osd volume down"
+  },
+  "network": {
+    "format-wifi": "",
+    "format-ethernet": "",
+    "format-disconnected": "",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ipaddr}",
+    "tooltip-format-ethernet": "{ifname}\n{ipaddr}",
+    "on-click": "nm-connection-editor"
+  },
+  "bluetooth": {
+    "format": "",
+    "format-disabled": "",
+    "format-off": "",
+    "format-connected": " {num_connections}",
+    "on-click": "blueman-manager"
+  },
+  "battery": {
+    "format": "{icon} {capacity}%",
+    "format-charging": " {capacity}%",
+    "format-icons": ["", "", "", "", ""],
+    "states": { "warning": 25, "critical": 12 }
+  },
+  "custom/settings": {
+    "format": "",
+    "tooltip-format": "Prism Settings (Super+I)",
+    "on-click": "prism-settings"
+  },
+  "tray": { "icon-size": 16, "spacing": 8 },
+  "custom/power": {
+    "format": "",
+    "tooltip-format": "Power (Super+Esc)",
+    "on-click": "prism-power"
+  }
+}

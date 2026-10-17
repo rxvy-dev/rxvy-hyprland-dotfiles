@@ -1,0 +1,44 @@
+/* Prism — flat full-width bar (modern, minimal) */
+window#waybar {
+    background: @bar_bg_a;
+    color: @bar_fg;
+    border-bottom: 2px solid alpha(@accent, 0.6);
+}
+window#waybar.bottom { border-bottom: none; border-top: 2px solid alpha(@accent, 0.6); }
+tooltip { background: @bg; border: 1px solid @accent; }
+tooltip label { color: @fg; }
+
+#custom-launcher {
+    background: @accent;
+    color: @bg;
+    font-size: 17px;
+    padding: 0 16px 0 14px;
+}
+#workspaces button {
+    color: @fg_dim;
+    padding: 0 9px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    border-bottom: 2px solid transparent;
+}
+#workspaces button.active { color: @fg; border-bottom: 2px solid @accent; background: alpha(@accent, 0.12); }
+#workspaces button.urgent { color: @urgent; }
+#workspaces button:hover { background: alpha(@fg, 0.06); }
+
+#window { color: @fg_dim; padding-left: 10px; }
+#clock { font-weight: bold; color: @fg; padding: 0 10px; }
+#mpris { color: @accent2; padding: 0 10px; }
+
+#cpu, #memory, #temperature, #custom-nightlight, #pulseaudio, #network, #bluetooth, #battery, #custom-settings, #tray {
+    padding: 0 9px;
+    color: @fg;
+}
+#cpu, #memory, #temperature { color: @fg_dim; }
+#temperature.critical, #battery.critical, #pulseaudio.muted { color: @urgent; }
+#battery.warning { color: @warn; }
+#custom-nightlight.on { color: @warn; }
+
+#custom-power { background: @accent; color: @bg; padding: 0 16px; }
+#custom-power:hover { background: @urgent; }

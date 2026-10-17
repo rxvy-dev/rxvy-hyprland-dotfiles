@@ -1,0 +1,17 @@
+  # compositor + hypr ecosystem
+  hyprland hyprlock hypridle hyprsunset hyprpicker hyprpolkitagent
+  xdg-desktop-portal-hyprland xdg-desktop-portal-gtk qt5-wayland qt6-wayland
+  # shell pieces
+  waybar rofi kitty fastfetch mako libnotify swaybg btop
+  # screenshots + clipboard
+  grim slurp swappy wl-clipboard cliphist
+  # hardware keys, audio, network, bluetooth
+  brightnessctl playerctl pipewire pipewire-pulse wireplumber pavucontrol
+  networkmanager network-manager-applet bluez bluez-utils blueman
+  # files
+  thunar thunar-archive-plugin thunar-volman file-roller gvfs tumbler xdg-user-dirs xdg-utils pciutils
+  # settings app + theming
+  python python-gobject gtk4 libadwaita adw-gtk-theme papirus-icon-theme glib2
+  # fonts
+  noto-fonts noto-fonts-emoji ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols
+  ttf-terminus-nerd ttf-ibmplex-mono-nerd

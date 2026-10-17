@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Power menu
+pkill -x rofi && exit 0
+lock=" Lock"; logout=" Log out"; suspend=" Suspend"; reboot=" Reboot"; shutdown=" Shut down"
+choice=$(printf '%s\n' "$lock" "$suspend" "$logout" "$reboot" "$shutdown" |
+    rofi -dmenu -i -p "Power" -theme-str 'window { width: 320px; } listview { lines: 5; } inputbar { children: [prompt]; }')
+case "$choice" in
+    "$lock")     loginctl lock-session ;;
+    "$suspend")  loginctl lock-session; sleep 0.5; systemctl suspend ;;
+    "$logout")   hyprctl dispatch 'hl.dsp.exit()' ;;
+    "$reboot")   systemctl reboot ;;
+    "$shutdown") systemctl poweroff ;;
+esac

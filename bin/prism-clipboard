@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Clipboard history (cliphist + rofi). Shift+Del in the list wipes history.
+pkill -x rofi && exit 0
+sel=$(cliphist list | rofi -dmenu -i -p "Clipboard" -display-columns 2 -kb-custom-1 "shift+Delete")
+code=$?
+[ $code -eq 10 ] && { cliphist wipe; notify-send -a Prism "Clipboard cleared"; exit 0; }
+[ -n "$sel" ] && cliphist decode <<<"$sel" | wl-copy

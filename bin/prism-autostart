@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Prism session startup — run once by Hyprland on login.
+export PATH="$HOME/.local/bin:$PATH"
+
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE PATH 2>/dev/null &
+systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE 2>/dev/null
+
+has() { command -v "$1" >/dev/null 2>&1; }
+
+# polkit agent (password prompts for GUI apps)
+if systemctl --user list-unit-files hyprpolkitagent.service >/dev/null 2>&1; then
+    systemctl --user start hyprpolkitagent.service
+elif [ -x /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 ]; then
+    /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &
+fi
+
+# regenerate configs (cheap) so a fresh login always matches settings
+prism apply --no-reload >/dev/null 2>&1
+
+wall=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.cache/prism/current.json")))["wallpaper"])' 2>/dev/null)
+mode=$(prism get wallpaper_mode 2>/dev/null | tr -d '"')
+if [ -n "$wall" ] && [ -f "$wall" ]; then swaybg -i "$wall" -m "${mode:-fill}" &
+else swaybg -c '#202020' & fi
+
+has waybar   && waybar &
+has mako     && mako &
+has hypridle && hypridle &
+has nm-applet && nm-applet --indicator &
+has blueman-applet && systemctl is-active --quiet bluetooth && blueman-applet &
+if has cliphist && has wl-paste; then
+    wl-paste --type text  --watch cliphist store &
+    wl-paste --type image --watch cliphist store &
+fi
+[ "$(prism get night_light 2>/dev/null)" = "true" ] && has hyprsunset && hyprsunset -t "$(prism get night_temp)" &
+
+# user autostart entries from settings
+python3 - <<'PY' | while IFS= read -r cmd; do [ -n "$cmd" ] && (bash -c "$cmd" &); done
+import json, os
+try:
+    s = json.load(open(os.path.expanduser("~/.config/prism/settings.json")))
+    for c in s.get("autostart", []): print(c)
+except Exception: pass
+PY
+wait

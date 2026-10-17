@@ -1,0 +1,56 @@
+/* Prism — floating islands (modern, glassy) */
+window#waybar {
+    background: transparent;
+    color: @bar_fg;
+}
+tooltip { background: @bg; border: 1px solid @accent; border-radius: 10px; }
+tooltip label { color: @fg; }
+
+.modules-left, .modules-center, .modules-right { margin: 8px 12px 0 12px; }
+window#waybar.bottom .modules-left,
+window#waybar.bottom .modules-center,
+window#waybar.bottom .modules-right { margin: 0 12px 8px 12px; }
+
+#custom-launcher, #workspaces, #window, #clock, #mpris, #hw, #sys, #tray, #custom-power {
+    background: @bar_bg_a;
+    border: 1px solid alpha(@accent, 0.25);
+    border-radius: 14px;
+    padding: 2px 12px;
+    margin: 0 3px;
+}
+window#waybar.empty #window { background: transparent; border-color: transparent; }
+
+#custom-launcher { color: @accent; font-size: 18px; padding: 0 14px 0 12px; }
+#custom-launcher:hover { background: @accent; color: @bg; }
+
+#workspaces { padding: 0 6px; }
+#workspaces button {
+    color: @fg_dim;
+    padding: 0 5px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    transition: all 0.2s ease;
+}
+#workspaces button.active { color: @accent; }
+#workspaces button.urgent { color: @urgent; }
+#workspaces button:hover { color: @accent2; background: alpha(@accent, 0.12); }
+
+#window { color: @fg; }
+#clock { color: @fg; font-weight: bold; }
+#mpris { color: @accent2; }
+
+#cpu, #memory, #temperature, #custom-nightlight, #pulseaudio, #network, #bluetooth, #battery, #custom-settings {
+    padding: 0 7px;
+    color: @fg;
+}
+#cpu { color: @accent; }
+#memory { color: @accent2; }
+#temperature.critical, #battery.critical, #pulseaudio.muted { color: @urgent; }
+#battery.warning { color: @warn; }
+#custom-nightlight.on { color: @warn; }
+#custom-settings:hover { color: @accent; }
+
+#custom-power { color: @urgent; padding: 0 14px; }
+#custom-power:hover { background: @urgent; color: @bg; }

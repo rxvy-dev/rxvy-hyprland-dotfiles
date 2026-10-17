@@ -1,0 +1,745 @@
+#!/usr/bin/env python3
+"""Prism Settings — GTK4 / libadwaita control panel for the Prism Hyprland rice."""
+import os
+import sys
+import shutil
+import threading
+
+sys.path.insert(0, os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "prism", "lib"))
+import prismlib as P  # noqa: E402
+
+import gi  # noqa: E402
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import Gtk, Adw, Gio, GLib, Gdk, GdkPixbuf  # noqa: E402
+
+APP_ID = "dev.prism.Settings"
+
+CSS = b"""
+.theme-card { padding: 6px; border-radius: 14px; }
+.theme-card picture { border-radius: 10px; }
+.theme-card.current { box-shadow: inset 0 0 0 3px @accent_color; background: alpha(@accent_color, 0.08); }
+.swatch { min-width: 14px; min-height: 14px; border-radius: 99px; border: 1px solid alpha(currentColor, 0.2); }
+.wall-card { padding: 4px; border-radius: 12px; }
+.wall-card.current { box-shadow: inset 0 0 0 3px @accent_color; }
+.wall-card picture { border-radius: 9px; }
+.hero-title { font-size: 28px; font-weight: 800; }
+.kind-tag { font-size: 10px; font-weight: bold; padding: 1px 7px; border-radius: 99px; background: alpha(currentColor, 0.1); }
+"""
+
+THEME_LOOK_KEYS = ["rounding", "gaps_in", "gaps_out", "border_size", "blur", "shadows", "animations",
+                   "inactive_opacity", "terminal_opacity", "bar_style", "bar_position", "font_ui",
+                   "font_mono", "font_size"]
+
+
+class Settings:
+    """Shared state + debounced apply."""
+
+    def __init__(self, win):
+        self.win = win
+        self.s = P.load_settings()
+        self._pending = None
+        self._wallpaper = False
+        self._busy = False
+
+    def theme(self):
+        return P.load_theme(self.s["theme"]) or P.list_themes()[0]
+
+    def resolved(self):
+        return P.resolve(self.theme(), self.s)
+
+    def set(self, key, value, wallpaper=False, delay=350):
+        if self.s.get(key) == value:
+            return
+        self.s[key] = value
+        P.save_settings(self.s)
+        self.schedule(wallpaper, delay)
+
+    def schedule(self, wallpaper=False, delay=350):
+        self._wallpaper = self._wallpaper or wallpaper
+        if self._pending:
+            GLib.source_remove(self._pending)
+        self._pending = GLib.timeout_add(delay, self._run)
+
+    def _run(self):
+        self._pending = None
+        if self._busy:
+            self.schedule(self._wallpaper)
+            return False
+        self._busy = True
+        wp, self._wallpaper = self._wallpaper, False
+        s = dict(self.s)
+
+        def work():
+            try:
+                P.apply(s, wallpaper=wp)
+            except Exception as e:  # keep the UI alive no matter what
+                GLib.idle_add(self.win.toast, "Error: %s" % e)
+            finally:
+                self._busy = False
+        threading.Thread(target=work, daemon=True).start()
+        return False
+
+
+# ----------------------------------------------------------------------------
+# Row helpers
+# ----------------------------------------------------------------------------
+def switch_row(st, title, key, subtitle=None, resolved_key=None, on_change=None):
+    row = Adw.SwitchRow(title=title)
+    if subtitle:
+        row.set_subtitle(subtitle)
+    val = st.s.get(key)
+    if val is None and resolved_key:
+        val = st.resolved()[resolved_key]
+    row.set_active(bool(val))
+
+    def changed(r, _p):
+        st.set(key, r.get_active())
+        if on_change:
+            on_change(r.get_active())
+    row.connect("notify::active", changed)
+    return row
+
+
+def spin_row(st, title, key, lo, hi, step, digits=0, subtitle=None, resolved_key=None, cast=int):
+    adj = Gtk.Adjustment(lower=lo, upper=hi, step_increment=step, page_increment=step * 5)
+    row = Adw.SpinRow(title=title, adjustment=adj, digits=digits)
+    if subtitle:
+        row.set_subtitle(subtitle)
+    val = st.s.get(key)
+    if val is None and resolved_key:
+        val = st.resolved()[resolved_key]
+    row.set_value(float(val if val is not None else lo))
+    row.connect("notify::value", lambda r, _p: st.set(key, cast(round(r.get_value(), digits) if digits else r.get_value())))
+    return row
+
+
+def combo_row(st, title, key, options, subtitle=None, wallpaper=False, on_change=None):
+    """options: list of (value, label)"""
+    model = Gtk.StringList.new([lbl for _, lbl in options])
+    row = Adw.ComboRow(title=title, model=model)
+    if subtitle:
+        row.set_subtitle(subtitle)
+    values = [v for v, _ in options]
+    cur = st.s.get(key)
+    row.set_selected(values.index(cur) if cur in values else 0)
+
+    def changed(r, _p):
+        v = values[r.get_selected()]
+        st.set(key, v, wallpaper=wallpaper)
+        if on_change:
+            on_change(v)
+    row.connect("notify::selected", changed)
+    return row
+
+
+def entry_row(st, title, key, wallpaper=False):
+    row = Adw.EntryRow(title=title)
+    row.set_text(str(st.s.get(key) or ""))
+    row.set_show_apply_button(True)
+    row.connect("apply", lambda r: st.set(key, r.get_text().strip(), wallpaper=wallpaper, delay=50))
+    return row
+
+
+def button_row(title, subtitle, label, cb, style=None):
+    row = Adw.ActionRow(title=title)
+    if subtitle:
+        row.set_subtitle(subtitle)
+    btn = Gtk.Button(label=label, valign=Gtk.Align.CENTER)
+    if style:
+        btn.add_css_class(style)
+    btn.connect("clicked", lambda *_: cb())
+    row.add_suffix(btn)
+    row.set_activatable_widget(btn)
+    return row
+
+
+def swatch(color):
+    return Gtk.Box(css_classes=["swatch", "sw-" + color.lstrip("#").lower()])
+
+
+def swatch_css():
+    colors = set()
+    for t in P.list_themes():
+        for k in ("BG", "ACCENT", "ACCENT2", "C1", "C2", "C3", "FG"):
+            colors.add(t[k].lstrip("#").lower())
+    return "".join(".sw-%s { background: #%s; }\n" % (c, c) for c in colors).encode()
+
+
+def picture(path, w, h):
+    """A picture scaled down on load (keeps the grid compact and memory low)."""
+    try:
+        pb = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, w, h, True)
+        pic = Gtk.Picture.new_for_paintable(Gdk.Texture.new_for_pixbuf(pb))
+    except Exception:
+        pic = Gtk.Picture()
+    pic.set_content_fit(Gtk.ContentFit.COVER)
+    pic.set_can_shrink(True)
+    pic.set_size_request(w, h)
+    return pic
+
+
+def scrolled(child):
+    sw = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, vexpand=True)
+    sw.set_child(child)
+    return sw
+
+
+# ----------------------------------------------------------------------------
+# Pages
+# ----------------------------------------------------------------------------
+class ThemesPage(Gtk.Box):
+    def __init__(self, st):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self.st = st
+        self.filter = "all"
+        clamp = Adw.Clamp(maximum_size=1100, margin_top=18, margin_bottom=18, margin_start=18, margin_end=18)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        clamp.set_child(box)
+
+        head = Gtk.Box(spacing=12)
+        title = Gtk.Label(label="Themes", xalign=0, hexpand=True, css_classes=["hero-title"])
+        head.append(title)
+        seg = Gtk.Box(css_classes=["linked"], valign=Gtk.Align.CENTER)
+        first = None
+        for key, label in (("all", "All"), ("retro", "Retro"), ("modern", "Modern")):
+            b = Gtk.ToggleButton(label=label)
+            if first:
+                b.set_group(first)
+            else:
+                first = b
+                b.set_active(True)
+            b.connect("toggled", self.on_filter, key)
+            seg.append(b)
+        head.append(seg)
+        box.append(head)
+
+        sub = Gtk.Label(xalign=0, wrap=True, css_classes=["dim-label"],
+                        label="Click a theme to apply it everywhere — windows, bar, terminal, launcher, lock screen, "
+                              "notifications and GTK apps. Super+T opens a quick picker, Super+Shift+T cycles.")
+        box.append(sub)
+
+        self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
+                                max_children_per_line=4, min_children_per_line=1,
+                                column_spacing=10, row_spacing=10)
+        self.flow.set_filter_func(self.filter_fn)
+        box.append(self.flow)
+        self.cards = {}
+        for t in P.list_themes():
+            card = self.make_card(t)
+            self.flow.append(card)
+        self.mark_current()
+        self.append(scrolled(clamp))
+
+    def make_card(self, t):
+        btn = Gtk.Button(css_classes=["flat", "theme-card"])
+        v = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        thumb = os.path.join(t["DIR"], "thumb.png")
+        pic = picture(thumb if os.path.exists(thumb) else (t["WALLPAPER"] or ""), 224, 126)
+        v.append(pic)
+        row = Gtk.Box(spacing=6, margin_start=4, margin_end=4)
+        row.append(Gtk.Label(label=t["NAME"], xalign=0, hexpand=True, css_classes=["heading"]))
+        row.append(Gtk.Label(label=t.get("KIND", "modern"), css_classes=["kind-tag"], valign=Gtk.Align.CENTER))
+        v.append(row)
+        sw = Gtk.Box(spacing=4, margin_start=4, margin_bottom=2)
+        for k in ("BG", "ACCENT", "ACCENT2", "C1", "C2", "C3", "FG"):
+            sw.append(swatch(t[k]))
+        v.append(sw)
+        desc = Gtk.Label(label=t.get("DESC", ""), xalign=0, wrap=True, max_width_chars=28,
+                         css_classes=["dim-label", "caption"], margin_start=4, margin_end=4)
+        v.append(desc)
+        btn.set_child(v)
+        btn.connect("clicked", self.on_pick, t["ID"])
+        child = Gtk.FlowBoxChild()
+        child.set_child(btn)
+        child.kind = t.get("KIND", "modern")
+        self.cards[t["ID"]] = btn
+        return child
+
+    def filter_fn(self, child):
+        return self.filter == "all" or child.kind == self.filter
+
+    def on_filter(self, btn, key):
+        if btn.get_active():
+            self.filter = key
+            self.flow.invalidate_filter()
+
+    def mark_current(self):
+        for tid, b in self.cards.items():
+            if tid == self.st.s["theme"]:
+                b.add_css_class("current")
+            else:
+                b.remove_css_class("current")
+
+    def on_pick(self, _b, tid):
+        self.st.s["theme"] = tid
+        self.st.s["wallpaper"] = None
+        for k in THEME_LOOK_KEYS:
+            self.st.s[k] = None
+        P.save_settings(self.st.s)
+        self.st.schedule(wallpaper=True, delay=10)
+        self.mark_current()
+        self.st.win.toast("Theme: %s" % P.load_theme(tid)["NAME"])
+        self.st.win.refresh_pages(skip="themes")
+
+
+class WallpaperPage(Gtk.Box):
+    def __init__(self, st):
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.st = st
+        clamp = Adw.Clamp(maximum_size=1100, margin_top=18, margin_bottom=18, margin_start=18, margin_end=18)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        clamp.set_child(box)
+        box.append(Gtk.Label(label="Wallpaper", xalign=0, css_classes=["hero-title"]))
+
+        grp = Adw.PreferencesGroup()
+        self.use_theme = Adw.SwitchRow(title="Use the theme's wallpaper",
+                                       subtitle="Switching themes always resets to its own wallpaper")
+        self.use_theme.set_active(st.s.get("wallpaper") is None)
+        self.use_theme.connect("notify::active", self.on_use_theme)
+        grp.add(self.use_theme)
+        grp.add(combo_row(st, "Fit", "wallpaper_mode",
+                          [("fill", "Fill"), ("fit", "Fit"), ("center", "Center"), ("tile", "Tile"), ("stretch", "Stretch")],
+                          wallpaper=True))
+        grp.add(button_row("Add your own", "Copied to ~/.config/prism/wallpapers", "Choose image…", self.on_add,
+                           "suggested-action"))
+        box.append(grp)
+
+        self.flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, homogeneous=True,
+                                max_children_per_line=5, min_children_per_line=2,
+                                column_spacing=8, row_spacing=8)
+        box.append(self.flow)
+        self.cards = {}
+        self.populate()
+        self.append(scrolled(clamp))
+
+    def populate(self):
+        while (c := self.flow.get_first_child()):
+            self.flow.remove(c)
+        self.cards = {}
+        for w in P.list_wallpapers():
+            btn = Gtk.Button(css_classes=["flat", "wall-card"])
+            pic = picture(w, 176, 99)
+            btn.set_child(pic)
+            btn.set_tooltip_text(w)
+            btn.connect("clicked", self.on_pick, w)
+            self.flow.append(btn)
+            self.cards[w] = btn
+        self.mark()
+
+    def mark(self):
+        cur = self.st.resolved()["wallpaper"]
+        for w, b in self.cards.items():
+            (b.add_css_class if w == cur else b.remove_css_class)("current")
+
+    def on_pick(self, _b, path):
+        self.st.set("wallpaper", path, wallpaper=True, delay=10)
+        self.use_theme.set_active(False)
+        self.mark()
+
+    def on_use_theme(self, row, _p):
+        if row.get_active():
+            self.st.set("wallpaper", None, wallpaper=True, delay=10)
+            self.mark()
+
+    def on_add(self):
+        dlg = Gtk.FileDialog(title="Choose a wallpaper")
+        f = Gtk.FileFilter()
+        f.set_name("Images")
+        for m in ("image/png", "image/jpeg", "image/webp"):
+            f.add_mime_type(m)
+        store = Gio.ListStore.new(Gtk.FileFilter)
+        store.append(f)
+        dlg.set_filters(store)
+
+        def done(d, res):
+            try:
+                gf = d.open_finish(res)
+            except GLib.Error:
+                return
+            src = gf.get_path()
+            dst_dir = P.USER_WALL_DIRS[0]
+            os.makedirs(dst_dir, exist_ok=True)
+            dst = os.path.join(dst_dir, os.path.basename(src))
+            if os.path.abspath(src) != os.path.abspath(dst):
+                shutil.copy2(src, dst)
+            self.populate()
+            self.on_pick(None, dst)
+        dlg.open(self.get_root(), None, done)
+
+
+class LookPage(Adw.PreferencesPage):
+    def __init__(self, st):
+        super().__init__(title="Appearance", icon_name="applications-graphics-symbolic")
+        self.st = st
+        self.build()
+
+    def build(self):
+        st = self.st
+        r = st.resolved()
+        g = Adw.PreferencesGroup(title="Bar", description="Theme default follows the theme you pick.")
+        g.add(combo_row(st, "Bar style", "bar_style",
+                        [(None, "Theme default (%s)" % r["BAR_STYLE"]), ("islands", "Islands — floating pills"),
+                         ("flat", "Flat — full width"), ("xp", "XP taskbar"), ("classic", "Classic 98 taskbar"),
+                         ("terminal", "Terminal status line")]))
+        g.add(combo_row(st, "Position", "bar_position",
+                        [(None, "Theme default (%s)" % r["BAR_POSITION"]), ("top", "Top"), ("bottom", "Bottom")]))
+        g.add(switch_row(st, "24-hour clock", "clock_24h"))
+        g.add(switch_row(st, "Show seconds", "show_clock_seconds"))
+        self.add(g)
+
+        g = Adw.PreferencesGroup(title="Windows")
+        g.add(spin_row(st, "Corner rounding", "rounding", 0, 30, 1, resolved_key="rounding"))
+        g.add(spin_row(st, "Inner gaps", "gaps_in", 0, 40, 1, resolved_key="gaps_in"))
+        g.add(spin_row(st, "Outer gaps", "gaps_out", 0, 60, 1, resolved_key="gaps_out"))
+        g.add(spin_row(st, "Border width", "border_size", 0, 8, 1, resolved_key="border_size"))
+        g.add(spin_row(st, "Inactive window opacity", "inactive_opacity", 0.5, 1.0, 0.02, digits=2,
+                       resolved_key="inactive_opacity", cast=float))
+        g.add(switch_row(st, "Dim inactive windows", "dim_inactive"))
+        self.add(g)
+
+        g = Adw.PreferencesGroup(title="Effects")
+        g.add(switch_row(st, "Blur", "blur", "Frosted glass behind transparent windows and the bar", resolved_key="blur"))
+        g.add(switch_row(st, "Shadows", "shadows", resolved_key="shadows"))
+        g.add(combo_row(st, "Animations", "animations",
+                        [(None, "Theme default (%s)" % r["ANIMATIONS"]), ("smooth", "Smooth"), ("bouncy", "Bouncy"),
+                         ("fast", "Fast"), ("off", "Off")]))
+        self.add(g)
+
+        g = Adw.PreferencesGroup(title="Terminal and text")
+        g.add(spin_row(st, "Terminal opacity", "terminal_opacity", 0.5, 1.0, 0.02, digits=2,
+                       resolved_key="terminal_opacity", cast=float))
+        g.add(spin_row(st, "Font size", "font_size", 8, 20, 1, resolved_key="font_size"))
+        e1 = Adw.EntryRow(title="Interface font (theme: %s)" % r["FONT_UI"])
+        e1.set_text(st.s.get("font_ui") or "")
+        e1.set_show_apply_button(True)
+        e1.connect("apply", lambda w: st.set("font_ui", w.get_text().strip() or None, delay=50))
+        g.add(e1)
+        e2 = Adw.EntryRow(title="Monospace font (theme: %s)" % r["FONT_MONO"])
+        e2.set_text(st.s.get("font_mono") or "")
+        e2.set_show_apply_button(True)
+        e2.connect("apply", lambda w: st.set("font_mono", w.get_text().strip() or None, delay=50))
+        g.add(e2)
+        self.add(g)
+
+        g = Adw.PreferencesGroup()
+        g.add(button_row("Reset to theme defaults", "Undo every tweak on this page", "Reset", self.reset, "destructive-action"))
+        self.add(g)
+
+    def reset(self):
+        for k in THEME_LOOK_KEYS:
+            self.st.s[k] = None
+        self.st.s["dim_inactive"] = False
+        P.save_settings(self.st.s)
+        self.st.schedule()
+        self.st.win.refresh_pages()
+        self.st.win.toast("Appearance reset to theme defaults")
+
+
+class InputPage(Adw.PreferencesPage):
+    def __init__(self, st):
+        super().__init__(title="Input", icon_name="input-keyboard-symbolic")
+        g = Adw.PreferencesGroup(title="Keyboard",
+                                 description="Layouts are comma-separated, e.g. “us,de”. Options like “grp:alt_shift_toggle,caps:escape”.")
+        g.add(entry_row(st, "Layout", "kb_layout"))
+        g.add(entry_row(st, "Variant", "kb_variant"))
+        g.add(entry_row(st, "Options", "kb_options"))
+        g.add(spin_row(st, "Repeat rate", "repeat_rate", 10, 80, 1, subtitle="Keys per second"))
+        g.add(spin_row(st, "Repeat delay", "repeat_delay", 150, 1000, 25, subtitle="Milliseconds"))
+        self.add(g)
+        g = Adw.PreferencesGroup(title="Mouse and touchpad")
+        g.add(spin_row(st, "Pointer speed", "sensitivity", -1.0, 1.0, 0.05, digits=2, cast=float))
+        g.add(switch_row(st, "Flat acceleration", "accel_flat", "Recommended for gaming"))
+        g.add(switch_row(st, "Natural scrolling (mouse)", "natural_scroll"))
+        g.add(switch_row(st, "Natural scrolling (touchpad)", "touchpad_natural_scroll"))
+        fm = Adw.SwitchRow(title="Focus follows mouse")
+        fm.set_active(int(st.s.get("follow_mouse", 1)) == 1)
+        fm.connect("notify::active", lambda r, _p: st.set("follow_mouse", 1 if r.get_active() else 0))
+        g.add(fm)
+        self.add(g)
+
+
+class DisplayPage(Adw.PreferencesPage):
+    def __init__(self, st):
+        super().__init__(title="Displays", icon_name="video-display-symbolic")
+        self.st = st
+        mons = P.monitors()
+        if not mons:
+            g = Adw.PreferencesGroup(title="No monitors found",
+                                     description="Display settings need a running Hyprland session.")
+            self.add(g)
+            return
+        saved = {m["name"]: m for m in st.s.get("monitors", [])}
+        self.rows = {}
+        for m in mons:
+            name = m["name"]
+            cur = saved.get(name, {})
+            g = Adw.PreferencesGroup(title=name, description="%s %s" % (m.get("make", ""), m.get("model", "")))
+            modes = ["preferred", "highrr", "highres"]
+            for mode in m.get("availableModes", []):
+                clean = mode.replace("Hz", "")
+                if clean not in modes:
+                    modes.append(clean)
+            mrow = Adw.ComboRow(title="Resolution & refresh", model=Gtk.StringList.new(modes))
+            live = "%dx%d@%.2f" % (m["width"], m["height"], m["refreshRate"])
+            want = cur.get("mode") or (live if live in modes else "preferred")
+            mrow.set_selected(modes.index(want) if want in modes else 0)
+            g.add(mrow)
+            srow = Adw.SpinRow(title="Scale", digits=2,
+                               adjustment=Gtk.Adjustment(lower=0.5, upper=3, step_increment=0.25, page_increment=0.5))
+            srow.set_value(float(cur.get("scale", m.get("scale", 1))))
+            g.add(srow)
+            prow = Adw.EntryRow(title="Position (auto, or e.g. 1920x0)")
+            prow.set_text(str(cur.get("position", "auto")))
+            g.add(prow)
+            drow = Adw.SwitchRow(title="Enabled")
+            drow.set_active(not cur.get("disabled", False))
+            g.add(drow)
+            self.rows[name] = (modes, mrow, srow, prow, drow)
+            self.add(g)
+        g = Adw.PreferencesGroup()
+        g.add(button_row("Apply display settings", "If something goes wrong, edit ~/.config/prism/settings.json from a TTY",
+                         "Apply", self.apply, "suggested-action"))
+        self.add(g)
+
+    def apply(self):
+        out = []
+        for name, (modes, mrow, srow, prow, drow) in self.rows.items():
+            out.append({"name": name, "mode": modes[mrow.get_selected()], "scale": round(srow.get_value(), 2),
+                        "position": prow.get_text().strip() or "auto", "disabled": not drow.get_active()})
+        if all(m["disabled"] for m in out):
+            self.st.win.toast("Refusing to disable every monitor")
+            return
+        self.st.set("monitors", out, delay=10)
+        self.st.win.toast("Display settings applied")
+
+
+class PowerPage(Adw.PreferencesPage):
+    def __init__(self, st):
+        super().__init__(title="Power & Lock", icon_name="system-shutdown-symbolic")
+        mins = lambda n: n * 60  # noqa: E731
+        times = [(0, "Never"), (mins(1), "1 minute"), (mins(2), "2 minutes"), (mins(5), "5 minutes"),
+                 (mins(10), "10 minutes"), (mins(15), "15 minutes"), (mins(30), "30 minutes"), (mins(60), "1 hour")]
+        g = Adw.PreferencesGroup(title="Idle")
+        g.add(combo_row(st, "Lock screen after", "lock_timeout", times))
+        g.add(combo_row(st, "Turn screen off after", "screen_off_timeout", times))
+        g.add(combo_row(st, "Suspend after", "suspend_timeout", times))
+        g.add(button_row("Lock now", "Super+L", "Lock", lambda: P.spawn(["loginctl", "lock-session"])))
+        self.add(g)
+
+        g = Adw.PreferencesGroup(title="Night light", description="Warmer colors in the evening (hyprsunset). Super+N toggles.")
+        nl = Adw.SwitchRow(title="Night light")
+        nl.set_active(bool(st.s.get("night_light")))
+
+        def nl_changed(r, _p):
+            st.s["night_light"] = r.get_active()
+            P.save_settings(st.s)
+            P.nightlight_runtime(st.s)
+        nl.connect("notify::active", nl_changed)
+        g.add(nl)
+        tr = Adw.SpinRow(title="Temperature", subtitle="Kelvin — lower is warmer",
+                         adjustment=Gtk.Adjustment(lower=2500, upper=6500, step_increment=100, page_increment=500))
+        tr.set_value(int(st.s.get("night_temp", 4500)))
+
+        def t_changed(r, _p):
+            st.s["night_temp"] = int(r.get_value())
+            P.save_settings(st.s)
+            if st.s.get("night_light"):
+                P.nightlight_runtime(st.s)
+        tr.connect("notify::value", t_changed)
+        g.add(tr)
+        self.add(g)
+
+
+class AppsPage(Adw.PreferencesPage):
+    def __init__(self, st):
+        super().__init__(title="Apps & Startup", icon_name="application-x-executable-symbolic")
+        self.st = st
+        g = Adw.PreferencesGroup(title="Default apps", description="Used by Super+Return, Super+B and Super+E.")
+        g.add(entry_row(st, "Terminal", "terminal"))
+        g.add(entry_row(st, "Browser", "browser"))
+        g.add(entry_row(st, "File manager", "files"))
+        self.add(g)
+
+        g = Adw.PreferencesGroup(title="fastfetch")
+        g.add(combo_row(st, "Logo", "fastfetch_logo",
+                        [("prism", "Prism"), ("arch", "Arch"), ("arch_small", "Arch (small)"), ("none", "None")]))
+        g.add(button_row("Try it", None, "Run fastfetch",
+                         lambda: P.spawn([st.s.get("terminal", "kitty"), "--hold", "fastfetch"])))
+        self.add(g)
+
+        self.auto = Adw.PreferencesGroup(title="Autostart", description="Commands run when you log in.")
+        self.add(self.auto)
+        self.auto_rows = []
+        self.add_entry = Adw.EntryRow(title="Add a command (e.g. discord --start-minimized)")
+        self.add_entry.set_show_apply_button(True)
+        self.add_entry.connect("apply", self.on_add)
+        self.render_auto()
+
+    def render_auto(self):
+        for r in self.auto_rows:
+            self.auto.remove(r)
+        self.auto_rows = []
+        if self.add_entry.get_parent() is not None:
+            self.auto.remove(self.add_entry)
+        for i, cmd in enumerate(self.st.s.get("autostart", [])):
+            row = Adw.ActionRow(title=GLib.markup_escape_text(cmd), use_markup=True)
+            b = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER, css_classes=["flat"])
+            b.connect("clicked", self.on_remove, i)
+            row.add_suffix(b)
+            self.auto.add(row)
+            self.auto_rows.append(row)
+        self.auto.add(self.add_entry)
+
+    def on_add(self, row):
+        cmd = row.get_text().strip()
+        if not cmd:
+            return
+        self.st.s["autostart"] = self.st.s.get("autostart", []) + [cmd]
+        P.save_settings(self.st.s)
+        row.set_text("")
+        self.render_auto()
+
+    def on_remove(self, _b, i):
+        lst = list(self.st.s.get("autostart", []))
+        lst.pop(i)
+        self.st.s["autostart"] = lst
+        P.save_settings(self.st.s)
+        self.render_auto()
+
+
+class AboutPage(Adw.PreferencesPage):
+    def __init__(self, st):
+        super().__init__(title="About", icon_name="help-about-symbolic")
+        t = st.theme()
+        g = Adw.PreferencesGroup()
+        hero = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_bottom=12)
+        hero.append(Gtk.Label(label="◆ Prism", css_classes=["hero-title"]))
+        hero.append(Gtk.Label(label="Hyprland rice · v%s · theme: %s" % (P.VERSION, t["NAME"]), css_classes=["dim-label"]))
+        g.add(hero)
+        self.add(g)
+        g = Adw.PreferencesGroup(title="Shortcuts")
+        g.add(button_row("Keybind cheat sheet", "Super+F1", "Show", lambda: P.spawn(["prism-keybinds"])))
+        g.add(button_row("Theme quick-picker", "Super+T", "Open", lambda: P.spawn(["prism-theme-menu"])))
+        self.add(g)
+        g = Adw.PreferencesGroup(title="Advanced")
+        g.add(button_row("Your own Hyprland tweaks", "~/.config/hypr/custom.lua — loaded last, never overwritten",
+                         "Edit", self.edit_custom))
+        g.add(button_row("Config folder", "~/.config", "Open", lambda: P.spawn(["xdg-open", P.CONFIG])))
+        g.add(button_row("Regenerate everything", "Rewrite every config from the current theme + settings",
+                         "Re-apply", lambda: st.schedule(wallpaper=True, delay=10)))
+        self.add(g)
+
+    def edit_custom(self):
+        path = os.path.join(P.CONFIG, "hypr", "custom.lua")
+        if not os.path.exists(path):
+            P.write(path, "-- Your Hyprland tweaks. Example:\n-- hl.bind(\"SUPER + Z\", hl.dsp.exec_cmd(\"zeditor\"))\n")
+        P.spawn(["xdg-open", path])
+
+
+# ----------------------------------------------------------------------------
+# Window
+# ----------------------------------------------------------------------------
+PAGES = [
+    ("themes", "Themes", "applications-graphics-symbolic", ThemesPage),
+    ("wallpaper", "Wallpaper", "image-x-generic-symbolic", WallpaperPage),
+    ("look", "Appearance", "preferences-desktop-appearance-symbolic", LookPage),
+    ("input", "Input", "input-keyboard-symbolic", InputPage),
+    ("displays", "Displays", "video-display-symbolic", DisplayPage),
+    ("power", "Power & Lock", "system-shutdown-symbolic", PowerPage),
+    ("apps", "Apps & Startup", "application-x-executable-symbolic", AppsPage),
+    ("about", "About", "help-about-symbolic", AboutPage),
+]
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app):
+        super().__init__(application=app, title="Prism Settings", default_width=980, default_height=680,
+                         width_request=360, height_request=420)
+        self.st = Settings(self)
+        self.toasts = Adw.ToastOverlay()
+
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE, transition_duration=150)
+        self.pages = {}
+        for key, title, _icon, cls in PAGES:
+            page = cls(self.st)
+            self.pages[key] = page
+            self.stack.add_named(page, key)
+
+        listbox = Gtk.ListBox(css_classes=["navigation-sidebar"])
+        for key, title, icon, _ in PAGES:
+            row = Gtk.ListBoxRow()
+            row.key = key
+            b = Gtk.Box(spacing=12, margin_top=8, margin_bottom=8, margin_start=6)
+            b.append(Gtk.Image.new_from_icon_name(icon))
+            b.append(Gtk.Label(label=title, xalign=0))
+            row.set_child(b)
+            listbox.append(row)
+
+        side_tv = Adw.ToolbarView()
+        side_tv.add_top_bar(Adw.HeaderBar(show_title=False))
+        side_tv.set_content(scrolled(listbox))
+        side = Adw.NavigationPage(title="Prism", child=side_tv)
+
+        content_tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar()
+        content_tv.add_top_bar(hb)
+        content_tv.set_content(self.stack)
+        content = Adw.NavigationPage(title="Themes", child=content_tv)
+        titles = {k: t for k, t, _i, _c in PAGES}
+
+        def on_row(_l, row):
+            if row:
+                self.stack.set_visible_child_name(row.key)
+                content.set_title(titles[row.key])
+        listbox.connect("row-selected", on_row)
+        listbox.select_row(listbox.get_row_at_index(0))
+
+        split = Adw.NavigationSplitView(sidebar=side, content=content, min_sidebar_width=200, max_sidebar_width=240)
+        self.toasts.set_child(split)
+        self.set_content(self.toasts)
+
+        bp = Adw.Breakpoint.new(Adw.BreakpointCondition.parse("max-width: 640sp"))
+        bp.add_setter(split, "collapsed", True)
+        self.add_breakpoint(bp)
+
+    def toast(self, text):
+        self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=2))
+        return False
+
+    def refresh_pages(self, skip=None):
+        """Rebuild pages whose 'theme default' values depend on the current theme."""
+        for key, _t, _i, cls in PAGES:
+            if key in ("themes", "displays", "input", "power", "apps") or key == skip:
+                continue
+            visible = self.stack.get_visible_child_name()
+            old = self.pages[key]
+            self.stack.remove(old)
+            new = cls(self.st)
+            self.pages[key] = new
+            self.stack.add_named(new, key)
+            if visible == key:
+                self.stack.set_visible_child_name(key)
+
+
+class App(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
+
+    def do_activate(self):
+        win = self.props.active_window
+        if not win:
+            prov = Gtk.CssProvider()
+            prov.load_from_data(CSS + swatch_css())
+            Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov,
+                                                      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            win = Window(self)
+        win.present()
+
+
+if __name__ == "__main__":
+    if not P.list_themes():
+        print("No Prism themes found in %s — run install.sh first." % P.THEMES_DIR, file=sys.stderr)
+        sys.exit(1)
+    sys.exit(App().run(sys.argv))

@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""prism — command line control for the Prism Hyprland rice."""
+import os
+import sys
+import json
+import random
+
+sys.path.insert(0, os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "prism", "lib"))
+import prismlib as P  # noqa: E402
+
+USAGE = """prism %s — Hyprland rice control
+
+  prism theme <id>          switch theme (resets look overrides to theme defaults)
+  prism theme next|prev     cycle themes
+  prism themes [--json]     list themes
+  prism current             show current theme
+  prism wallpaper <file>    set wallpaper (use 'theme' to go back to the theme wallpaper)
+  prism wallpaper random    random wallpaper from your collection
+  prism set <key> <value>   change a setting  (e.g. prism set gaps_out 8)
+  prism get [key]           show settings
+  prism reset <key>         reset a setting to theme/default
+  prism apply               regenerate every config and reload
+  prism nightlight [on|off|toggle|status]
+  prism settings            open the settings app
+""" % P.VERSION
+
+
+def coerce(v):
+    lv = v.lower()
+    if lv in ("true", "on", "yes"):
+        return True
+    if lv in ("false", "off", "no"):
+        return False
+    if lv in ("null", "none", "default", "theme"):
+        return None
+    try:
+        return int(v)
+    except ValueError:
+        pass
+    try:
+        return float(v)
+    except ValueError:
+        return v
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(USAGE)
+        return 0
+    cmd, args = argv[0], argv[1:]
+    s = P.load_settings()
+
+    if cmd == "themes":
+        themes = P.list_themes()
+        if "--json" in args:
+            print(json.dumps([{"id": t["ID"], "name": t["NAME"], "kind": t.get("KIND"),
+                               "desc": t.get("DESC", "")} for t in themes]))
+        else:
+            for t in themes:
+                mark = "*" if t["ID"] == s["theme"] else " "
+                print("%s %-14s %-7s %s" % (mark, t["ID"], t.get("KIND", ""), t["NAME"]))
+        return 0
+
+    if cmd == "theme":
+        if not args:
+            print(s["theme"])
+            return 0
+        ids = [t["ID"] for t in P.list_themes()]
+        target = args[0]
+        if target in ("next", "prev"):
+            i = ids.index(s["theme"]) if s["theme"] in ids else 0
+            target = ids[(i + (1 if target == "next" else -1)) % len(ids)]
+        if target not in ids:
+            print("unknown theme '%s'. try: %s" % (target, ", ".join(ids)), file=sys.stderr)
+            return 1
+        r = P.set_theme(target, keep_wallpaper="--keep-wallpaper" in args)
+        print("theme ->", r["NAME"])
+        return 0
+
+    if cmd == "wallpapers":
+        for w in P.list_wallpapers():
+            print(w)
+        return 0
+
+    if cmd == "current":
+        t = P.load_theme(s["theme"])
+        print("%s (%s)" % (t["NAME"] if t else s["theme"], s["theme"]))
+        return 0
+
+    if cmd == "wallpaper":
+        if not args:
+            print(s.get("wallpaper") or "theme")
+            return 0
+        if args[0] == "theme":
+            s["wallpaper"] = None
+        elif args[0] == "random":
+            walls = P.list_wallpapers()
+            if not walls:
+                return 1
+            s["wallpaper"] = random.choice(walls)
+        else:
+            path = os.path.abspath(os.path.expanduser(args[0]))
+            if not os.path.isfile(path):
+                print("no such file:", path, file=sys.stderr)
+                return 1
+            s["wallpaper"] = path
+        P.save_settings(s)
+        r = P.generate(s)
+        if P.in_hyprland():
+            P.set_wallpaper_runtime(r, s)
+        print("wallpaper ->", r["wallpaper"])
+        return 0
+
+    if cmd == "set":
+        if len(args) < 2:
+            print("usage: prism set <key> <value>", file=sys.stderr)
+            return 1
+        key = args[0]
+        if key not in P.DEFAULTS:
+            print("unknown key '%s'. keys: %s" % (key, ", ".join(sorted(P.DEFAULTS))), file=sys.stderr)
+            return 1
+        s[key] = coerce(" ".join(args[1:]))
+        P.save_settings(s)
+        P.apply(s, wallpaper=key in ("wallpaper", "wallpaper_mode", "theme"))
+        return 0
+
+    if cmd == "reset":
+        if not args or args[0] not in P.DEFAULTS:
+            print("usage: prism reset <key>", file=sys.stderr)
+            return 1
+        s[args[0]] = P.DEFAULTS[args[0]]
+        P.save_settings(s)
+        P.apply(s, wallpaper=False)
+        return 0
+
+    if cmd == "get":
+        if args:
+            print(json.dumps(s.get(args[0])))
+        else:
+            print(json.dumps(s, indent=2))
+        return 0
+
+    if cmd == "apply":
+        P.apply(s, reload="--no-reload" not in args)
+        return 0
+
+    if cmd == "nightlight":
+        action = args[0] if args else "toggle"
+        if action == "status":
+            on = s.get("night_light")
+            print(json.dumps({"text": "" if on else "",
+                              "tooltip": "Night light: %s (%dK)" % ("on" if on else "off", s.get("night_temp", 4500)),
+                              "class": "on" if on else "off"}))
+            return 0
+        s["night_light"] = {"on": True, "off": False}.get(action, not s.get("night_light"))
+        P.save_settings(s)
+        P.nightlight_runtime(s)
+        return 0
+
+    if cmd == "settings":
+        os.execvp("prism-settings", ["prism-settings"] + args)
+
+    print(USAGE)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

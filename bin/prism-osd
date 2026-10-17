@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Volume / brightness with an on-screen popup. Usage: prism-osd volume|mic|brightness up|down|mute
+osd() { notify-send -a prism-osd -h string:x-canonical-private-synchronous:prism-osd -h int:value:"$2" -t 1200 "$1" ; }
+case "$1" in
+  volume)
+    case "$2" in
+      up)   wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ ;;
+      down) wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- ;;
+      mute) wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+    esac
+    out=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
+    vol=$(awk '{printf "%d", $2*100}' <<<"$out")
+    if grep -q MUTED <<<"$out"; then osd "Volume  muted" 0; else osd "Volume  ${vol}%" "$vol"; fi ;;
+  mic)
+    wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+    if wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | grep -q MUTED; then osd "Microphone muted" 0; else osd "Microphone on" 100; fi ;;
+  brightness)
+    case "$2" in
+      up)   brightnessctl -e4 -n2 set 5%+ >/dev/null ;;
+      down) brightnessctl -e4 -n2 set 5%- >/dev/null ;;
+    esac
+    pct=$(( $(brightnessctl get) * 100 / $(brightnessctl max) ))
+    osd "Brightness  ${pct}%" "$pct" ;;
+esac

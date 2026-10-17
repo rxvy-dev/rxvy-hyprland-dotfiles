@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Quick theme / wallpaper picker with previews. Usage: prism-theme-menu [wallpaper]
+pkill -x rofi && exit 0
+THEMES="${XDG_DATA_HOME:-$HOME/.local/share}/prism/themes"
+grid='window { width: 900px; } listview { columns: 3; lines: 3; } element { orientation: vertical; padding: 10px; } element-icon { size: 150px; } element-text { horizontal-align: 0.5; }'
+
+if [ "$1" = "wallpaper" ]; then
+    mapfile -t walls < <(prism wallpapers)
+    sel=$(for w in "${walls[@]}"; do
+            name=$(basename "$(dirname "$w")"); [[ "$w" == "$THEMES"* ]] || name=$(basename "$w")
+            printf '%s\0icon\x1f%s\n' "$name" "$w"
+          done | rofi -dmenu -i -p "Wallpaper" -format i -show-icons -theme-str "$grid")
+    [ -n "$sel" ] && prism wallpaper "${walls[$sel]}"
+    exit 0
+fi
+
+mapfile -t ids < <(prism themes --json | python3 -c 'import json,sys;[print(t["id"]) for t in json.load(sys.stdin)]')
+sel=$(prism themes --json | python3 -c '
+import json, sys, os
+d = os.path.expanduser(os.environ.get("XDG_DATA_HOME", "~/.local/share")) + "/prism/themes"
+for t in json.load(sys.stdin):
+    icon = os.path.join(d, t["id"], "thumb.png")
+    tag = "retro" if t["kind"] == "retro" else "modern"
+    sys.stdout.write("%s  <span size=\"small\" alpha=\"60%%\">%s</span>\0icon\x1f%s\n" % (t["name"], tag, icon))
+' | rofi -dmenu -i -p "Theme" -format i -markup-rows -show-icons -theme-str "$grid")
+[ -n "$sel" ] && prism theme "${ids[$sel]}"

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Prism Settings
+GenericName=Desktop Settings
+Comment=Themes, wallpaper, appearance, input, displays and more for the Prism Hyprland rice
+Exec=prism-settings
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+StartupWMClass=dev.prism.Settings
+Keywords=theme;wallpaper;rice;hyprland;appearance;

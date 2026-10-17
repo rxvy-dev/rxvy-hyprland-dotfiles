@@ -1,0 +1,45 @@
+/* Prism — Classic 98 taskbar: grey, bevelled, no nonsense */
+window#waybar {
+    background: #c0c0c0;
+    color: #000000;
+    border-top: 2px solid #ffffff;
+}
+tooltip { background: #ffffe1; border: 1px solid #000000; border-radius: 0; }
+tooltip label { color: #000000; }
+
+/* raised bevel */
+#custom-start, #taskbar button, #workspaces button {
+    background: #c0c0c0;
+    color: #000000;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #ffffff #404040 #404040 #ffffff;
+    border-radius: 0;
+    margin: 3px 2px;
+    box-shadow: none;
+}
+#custom-start { font-weight: bold; padding: 0 8px; margin-left: 3px; }
+#custom-start:hover, #taskbar button:hover, #workspaces button:hover { background: #c8c8c8; }
+
+/* pressed bevel */
+#taskbar button.active, #workspaces button.active {
+    border-color: #404040 #ffffff #ffffff #404040;
+    background: #dcdcdc;
+    font-weight: bold;
+}
+#workspaces button { padding: 0 6px; }
+#taskbar button { padding: 0 8px; min-width: 150px; }
+
+/* sunken notification area */
+#tray-area {
+    border-style: solid;
+    border-width: 1px;
+    border-color: #808080 #ffffff #ffffff #808080;
+    margin: 3px 3px;
+    padding: 0 4px;
+}
+#tray, #custom-nightlight, #pulseaudio, #network, #battery, #custom-settings, #clock {
+    color: #000000;
+    padding: 0 5px;
+}
+#battery.critical { color: #aa0000; }

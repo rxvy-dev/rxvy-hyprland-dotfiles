@@ -1,0 +1,53 @@
+// Prism — terminal layout (Phosphor CRT / Amber Terminal). Text only, like a status line.
+{
+  "layer": "top",
+  "position": "__POSITION__",
+  "height": __HEIGHT__,
+  "spacing": 0,
+  "modules-left": ["custom/prompt", "hyprland/workspaces", "hyprland/window"],
+  "modules-center": [],
+  "modules-right": ["cpu", "memory", "pulseaudio", "network", "battery", "custom/nightlight", "clock", "tray", "custom/power"],
+
+  "custom/prompt": {
+    "format": "root@prism:~$",
+    "tooltip": false,
+    "on-click": "prism-launcher apps",
+    "on-click-right": "prism-theme-menu"
+  },
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "persistent-workspaces": { "*": 5 }
+  },
+  "hyprland/window": { "format": "./{title}", "max-length": 50, "rewrite": { "./": "" } },
+  "cpu":    { "format": "CPU {usage:>2}%", "interval": 3 },
+  "memory": { "format": "MEM {percentage:>2}%", "interval": 5 },
+  "pulseaudio": {
+    "format": "VOL {volume:>3}%",
+    "format-muted": "VOL MUTE",
+    "on-click": "prism-osd volume mute",
+    "on-click-right": "pavucontrol",
+    "on-scroll-up": "prism-osd volume up",
+    "on-scroll-down": "prism-osd volume down"
+  },
+  "network": {
+    "format-wifi": "NET {essid}",
+    "format-ethernet": "NET {ifname}",
+    "format-disconnected": "NET DOWN",
+    "on-click": "nm-connection-editor"
+  },
+  "battery": { "format": "BAT {capacity}%", "format-charging": "BAT {capacity}%+" },
+  "custom/nightlight": {
+    "exec": "prism nightlight status",
+    "return-type": "json",
+    "format": "NL",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "prism nightlight toggle"
+  },
+  "clock": {
+    "format": "{:__CLOCK__}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+  "tray": { "icon-size": 14, "spacing": 6 },
+  "custom/power": { "format": "[X]", "tooltip": false, "on-click": "prism-power" }
+}

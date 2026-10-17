@@ -1,0 +1,88 @@
+// Prism — classic taskbar layout (used by the XP and Classic 98 themes)
+// __POSITION__ / __CLOCK__ / __HEIGHT__ are filled in by `prism apply`.
+{
+  "layer": "top",
+  "position": "__POSITION__",
+  "height": __HEIGHT__,
+  "spacing": 0,
+  "modules-left": ["custom/start", "hyprland/workspaces", "wlr/taskbar"],
+  "modules-center": [],
+  "modules-right": ["group/tray-area"],
+
+  "custom/start": {
+    "format": "  start",
+    "tooltip-format": "Apps (Super+Space) · right-click: power",
+    "on-click": "prism-launcher apps",
+    "on-click-right": "prism-power"
+  },
+
+  "hyprland/workspaces": {
+    "format": "{id}",
+    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+  },
+
+  "wlr/taskbar": {
+    "format": "{icon} {title:.22}",
+    "icon-size": 16,
+    "tooltip-format": "{title}",
+    "on-click": "activate",
+    "on-click-middle": "close",
+    "ignore-list": []
+  },
+
+  "group/tray-area": {
+    "orientation": "horizontal",
+    "modules": ["tray", "custom/nightlight", "pulseaudio", "network", "battery", "custom/settings", "clock"]
+  },
+
+  "tray": { "icon-size": 16, "spacing": 6 },
+
+  "custom/nightlight": {
+    "exec": "prism nightlight status",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "prism nightlight toggle"
+  },
+
+  "pulseaudio": {
+    "format": "{icon}",
+    "format-muted": "",
+    "format-icons": { "default": ["", "", ""] },
+    "tooltip-format": "Volume {volume}%",
+    "on-click": "prism-osd volume mute",
+    "on-click-right": "pavucontrol",
+    "on-scroll-up": "prism-osd volume up",
+    "on-scroll-down": "prism-osd volume down"
+  },
+
+  "network": {
+    "format-wifi": "",
+    "format-ethernet": "",
+    "format-disconnected": "",
+    "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+    "tooltip-format-ethernet": "{ifname} {ipaddr}",
+    "on-click": "nm-connection-editor"
+  },
+
+  "battery": {
+    "format": "{icon}",
+    "format-charging": "",
+    "format-icons": ["", "", "", "", ""],
+    "tooltip-format": "{capacity}% · {timeTo}",
+    "states": { "warning": 25, "critical": 12 }
+  },
+
+  "custom/settings": {
+    "format": "",
+    "tooltip-format": "Prism Settings (Super+I)",
+    "on-click": "prism-settings",
+    "on-click-right": "prism-theme-menu"
+  },
+
+  "clock": {
+    "format": "{:__CLOCK__}",
+    "tooltip-format": "<big>{:%A, %d %B %Y}</big>\n<tt><small>{calendar}</small></tt>"
+  }
+}

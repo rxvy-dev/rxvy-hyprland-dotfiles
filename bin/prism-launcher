@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Prism launcher wrapper around rofi. Usage: prism-launcher [apps|run|windows|emoji]
+pkill -x rofi && exit 0
+case "${1:-apps}" in
+    apps)    exec rofi -show drun ;;
+    run)     exec rofi -show run ;;
+    windows) exec rofi -show window ;;
+    emoji)
+        if rofi -h 2>/dev/null | grep -q emoji || [ -n "$(rofi -dump-config 2>/dev/null | grep -i emoji)" ]; then
+            exec rofi -modi emoji -show emoji
+        fi
+        notify-send -a Prism "Emoji picker" "Install rofi-emoji (AUR) to enable it." ;;
+    *) exec rofi -show drun ;;
+esac

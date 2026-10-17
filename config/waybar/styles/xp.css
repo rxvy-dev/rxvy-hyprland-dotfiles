@@ -1,0 +1,60 @@
+/* Prism — XP-style taskbar */
+window#waybar {
+    background-image: linear-gradient(to bottom, #3168d5 0%, #4993e6 6%, #2157d7 12%, #245edb 50%, #1941a5 100%);
+    color: #ffffff;
+    border-top: 1px solid #0c3daa;
+}
+tooltip { background: #ffffe1; border: 1px solid #000000; border-radius: 0; }
+tooltip label { color: #000000; }
+
+#custom-start {
+    background-image: linear-gradient(to bottom, #4ca84a 0%, #75c76e 10%, #3c9a2f 45%, #2f8a24 85%, #1f6b17 100%);
+    color: #ffffff;
+    font-style: italic;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 0 22px 0 12px;
+    border-radius: 0 12px 12px 0;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.6);
+    margin-right: 6px;
+}
+#custom-start:hover { background-image: linear-gradient(to bottom, #5cc05a, #47b23a 45%, #2b8a20); }
+
+#workspaces button {
+    color: #dce8ff;
+    padding: 0 7px;
+    margin: 4px 1px;
+    border-radius: 3px;
+    border: none;
+    background: transparent;
+}
+#workspaces button.active { background: rgba(255, 255, 255, 0.22); color: #ffffff; }
+#workspaces button:hover { background: rgba(255, 255, 255, 0.15); box-shadow: none; }
+
+#taskbar button {
+    color: #ffffff;
+    padding: 0 10px;
+    margin: 3px 2px;
+    min-width: 140px;
+    border-radius: 3px;
+    background-image: linear-gradient(to bottom, #3c81f3, #2a6fe3 50%, #1e5ed1);
+    border: 1px solid #1a4fb8;
+}
+#taskbar button.active {
+    background-image: linear-gradient(to bottom, #1e4fb8, #1b47a6 50%, #1a3f96);
+    border-color: #0d2f78;
+}
+#taskbar button:hover { background-image: linear-gradient(to bottom, #5596ff, #3c81f3); }
+
+#tray-area {
+    background-image: linear-gradient(to bottom, #0f8be8 0%, #15a3f4 8%, #0f8be8 50%, #0b74c9 100%);
+    border-left: 1px solid #0a4fa8;
+    padding: 0 6px 0 8px;
+}
+#tray, #custom-nightlight, #pulseaudio, #network, #battery, #custom-settings, #clock {
+    color: #ffffff;
+    padding: 0 6px;
+}
+#clock { padding: 0 10px 0 8px; }
+#battery.warning { color: #ffe680; }
+#battery.critical { color: #ff8080; }
