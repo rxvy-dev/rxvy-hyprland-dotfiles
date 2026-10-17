@@ -96,4 +96,4 @@ change — tweak the custom files instead.
 
 ## Old dotfiles
 
-The previous setup (dunst, quickshell, wlogout) lives at the [`pre-prism`](../../tree/pre-prism) tag.
+The previous setup (dunst, quickshell, wlogout) lives at the [`pre-prism`](../../tree/pre-prism) branch.
