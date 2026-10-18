@@ -10,6 +10,17 @@ local mod  = "SUPER"
 local function b(keys, action, opts) hl.bind(keys, action, opts) end
 local function run(cmd) return hl.dsp.exec_cmd(cmd) end
 
+-- --class and --hold are kitty-only flags, so these work whatever your terminal is (kitty, interstellar, …):
+-- floating terminals always use kitty (the window rules below match its "kitty-float" class),
+-- and "hold" keeps the window open after the command with a shell.
+local function float_term(cmd)
+    return "kitty --class kitty-float" .. (cmd and (" -e " .. cmd) or "")
+end
+local function hold(cmd)
+    if term:match("kitty") then return term .. " --hold " .. cmd end
+    return term .. " -e sh -c '" .. cmd .. "; exec \"${SHELL:-sh}\"'"
+end
+
 -------------------------------------------------------------------------------
 -- AUTOSTART
 -------------------------------------------------------------------------------
@@ -21,7 +32,7 @@ end)
 -- APPS
 -------------------------------------------------------------------------------
 b(mod .. " + Return",       run(term))
-b(mod .. " + SHIFT + Return", run(term .. " --class kitty-float"))
+b(mod .. " + SHIFT + Return", run(float_term()))
 b(mod .. " + Space",        run("prism-launcher apps"))
 b(mod .. " + D",            run("prism-launcher apps"))
 b(mod .. " + R",            run("prism-launcher run"))
@@ -37,12 +48,12 @@ b(mod .. " + V",            run("prism-clipboard"))
 b(mod .. " + PERIOD",       run("prism-launcher emoji"))
 b(mod .. " + N",            run("prism nightlight toggle"))
 b(mod .. " + F1",           run("prism-keybinds"))
-b(mod .. " + SHIFT + F",    run(term .. " --hold fastfetch"))
+b(mod .. " + SHIFT + F",    run(hold("fastfetch")))
 b(mod .. " + L",            run("loginctl lock-session"))
 b(mod .. " + Escape",       run("prism-power"))
 b(mod .. " + SHIFT + C",    run("hyprpicker -a -n"))
 b(mod .. " + SHIFT + B",    run("pkill -x waybar || waybar"))
-b("CTRL + SHIFT + Escape",  run(term .. " --class kitty-float -e btop"))
+b("CTRL + SHIFT + Escape",  run(float_term("btop")))
 
 -- Screenshots
 b("Print",                  run("prism-screenshot region"))

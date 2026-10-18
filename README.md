@@ -53,7 +53,7 @@ Every change applies live.
 
 | Key | Action | Key | Action |
 |---|---|---|---|
-| Super+Return | kitty | Super+Q | close window |
+| Super+Return | terminal (kitty by default, change it in Settings → Apps) | Super+Q | close window |
 | Super+Space | app launcher | Super+F / M | fullscreen / maximize |
 | Super+E | files | Super+G | float / tile |
 | Super+B | browser | Super+1…0 | workspaces |

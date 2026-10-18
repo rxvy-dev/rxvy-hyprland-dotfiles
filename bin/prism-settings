@@ -552,11 +552,18 @@ class PowerPage(Adw.PreferencesPage):
         self.add(g)
 
 
+def _hold(term, cmd):
+    """Run cmd in the terminal and keep the window open (--hold is kitty-only)."""
+    if "kitty" in term:
+        return [term, "--hold", cmd]
+    return [term, "-e", "sh", "-c", cmd + '; exec "${SHELL:-sh}"']
+
+
 class AppsPage(Adw.PreferencesPage):
     def __init__(self, st):
         super().__init__(title="Apps & Startup", icon_name="application-x-executable-symbolic")
         self.st = st
-        g = Adw.PreferencesGroup(title="Default apps", description="Used by Super+Return, Super+B and Super+E.")
+        g = Adw.PreferencesGroup(title="Default apps", description="Used by Super+Return, Super+B and Super+E. Terminal: kitty, interstellar, foot, …")
         g.add(entry_row(st, "Terminal", "terminal"))
         g.add(entry_row(st, "Browser", "browser"))
         g.add(entry_row(st, "File manager", "files"))
@@ -566,7 +573,7 @@ class AppsPage(Adw.PreferencesPage):
         g.add(combo_row(st, "Logo", "fastfetch_logo",
                         [("prism", "Prism"), ("arch", "Arch"), ("arch_small", "Arch (small)"), ("none", "None")]))
         g.add(button_row("Try it", None, "Run fastfetch",
-                         lambda: P.spawn([st.s.get("terminal", "kitty"), "--hold", "fastfetch"])))
+                         lambda: P.spawn(_hold(st.s.get("terminal") or "kitty", "fastfetch"))))
         self.add(g)
 
         self.auto = Adw.PreferencesGroup(title="Autostart", description="Commands run when you log in.")
