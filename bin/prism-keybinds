@@ -2,7 +2,7 @@
 # Keybind cheat sheet
 pkill -x rofi && exit 0
 cat <<'KB' | rofi -dmenu -i -p "Keybinds" -theme-str 'window { width: 760px; } listview { lines: 16; }' >/dev/null
-SUPER + Return            Terminal (kitty)
+SUPER + Return            Terminal (set in Prism Settings)
 SUPER + Space / D         App launcher
 SUPER + Q                 Close window
 SUPER + E                 Files
